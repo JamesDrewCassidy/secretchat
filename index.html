@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encrypted Chat Room</title>
+  <!-- Include CryptoJS and PeerJS from CDNs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <style>
+    /* Inline CSS for responsiveness and styling */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .chat-container {
+      width: 90%;
+      max-width: 600px;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+    }
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    .chat-header h2 {
+      margin: 0;
+    }
+    .controls button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px 0;
+      background: #fafafa;
+    }
+    #chat-form {
+      display: flex;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px 0 0 4px;
+    }
+    button[type="submit"] {
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-left: none;
+      background: #4CAF50;
+      color: #fff;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+    }
+    button[type="submit"]:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2>Encrypted Chat Room</h2>
+      <div class="controls">
+        <button id="show-id-btn">Show My ID</button>
+        <button id="connect-btn">Connect to Peer</button>
+        <button id="copy-link-btn">Copy Chat Link</button>
+      </div>
+    </div>
+    <div id="chat-log" class="chat-log"></div>
+    <form id="chat-form">
+      <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" required>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+  <script>
+    'use strict';
+    // Shared secret key for encryption (demo only)
+    const SECRET_KEY = 'mySuperSecretKey123!';
+    // PeerJS and connection variables
+    let peer;
+    let conn = null;
+    // User nickname (stored in localStorage)
+    let nickname = '';
+    // DOM Elements
+    const chatLog = document.getElementById('chat-log');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const showIdBtn = document.getElementById('show-id-btn');
+    const connectBtn = document.getElementById('connect-btn');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+
+    // Prompt for nickname if not set already
+    function promptNickname() {
+      nickname = localStorage.getItem('chatNickname') || prompt("Enter your nickname:");
+      if (!nickname || nickname.trim() === '') {
+        nickname = "Anonymous";
+      }
+      localStorage.setItem('chatNickname', nickname);
+      displayMessage('System', `Your nickname is set to "${nickname}"`);
+    }
+
+    // Encryption helpers using CryptoJS
+    function encryptMessage(message) {
+      return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
+    }
+    function decryptMessage(ciphertext) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+        return bytes.toString(CryptoJS.enc.Utf8);
+      } catch (e) {
+        console.error('Decryption failed:', e);
+        return 'Decryption error';
+      }
+    }
+
+    // Append a message to the chat log with a timestamp
+    function displayMessage(sender, message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const messageElem = document.createElement('p');
+      messageElem.innerHTML = `<strong>[${timestamp}] ${sender}:</strong> ${message}`;
+      chatLog.appendChild(messageElem);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Initialize the PeerJS connection
+    function initPeer() {
+      peer = new Peer();
+      peer.on('open', id => {
+        displayMessage('System', `Your Peer ID is: ${id}`);
+        console.log('My peer ID is:', id);
+      });
+      // Accept incoming connections
+      peer.on('connection', connection => {
+        conn = connection;
+        setupConnectionHandlers();
+      });
+      peer.on('error', err => {
+        console.error('Peer error:', err);
+        displayMessage('System', 'Peer error: ' + err);
+      });
+    }
+
+    // Set up handlers for the PeerJS connection
+    function setupConnectionHandlers() {
+      if (!conn) return;
+      conn.on('data', data => {
+        const decrypted = decryptMessage(data);
+        displayMessage(conn.peer, decrypted);
+      });
+      conn.on('open', () => {
+        displayMessage('System', `Connected to peer: ${conn.peer}`);
+      });
+      conn.on('error', err => {
+        console.error('Connection error:', err);
+        displayMessage('System', 'Connection error: ' + err);
+      });
+      conn.on('close', () => {
+        displayMessage('System', 'Connection closed.');
+        conn = null;
+      });
+    }
+
+    // Manually connect to another peer by prompting for their Peer ID
+    function connectToPeer() {
+      const friendId = prompt("Enter friend's Peer ID:");
+      if (friendId && friendId.trim() !== '') {
+        conn = peer.connect(friendId);
+        setupConnectionHandlers();
+      } else {
+        displayMessage('System', 'Invalid Peer ID.');
+      }
+    }
+
+    // Event listener: Send chat message on form submission
+    chatForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const message = chatInput.value.trim();
+      if (message === '') return;
+      const encrypted = encryptMessage(message);
+      if (conn && conn.open) {
+        conn.send(encrypted);
+        displayMessage(nickname, message);
+      } else {
+        displayMessage('System', 'Not connected to any peer.');
+      }
+      chatInput.value = '';
+    });
+
+    // Show My ID button: display current Peer ID
+    showIdBtn.addEventListener('click', () => {
+      if (peer && peer.id) {
+        alert("Your Peer ID is: " + peer.id);
+      } else {
+        alert("Peer not initialized yet.");
+      }
+    });
+
+    // Connect button: prompt to connect to a friend's Peer ID
+    connectBtn.addEventListener('click', () => {
+      connectToPeer();
+    });
+
+    // Copy Chat Link button: copy the current URL to clipboard
+    copyLinkBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => alert("Chat link copied to clipboard!"))
+        .catch(err => {
+          console.error("Failed to copy link:", err);
+          alert("Failed to copy link.");
+        });
+    });
+
+    // On page load, prompt for nickname and initialize PeerJS
+    window.addEventListener('load', () => {
+      promptNickname();
+      initPeer();
+    });
+  </script>
+</body>
+</html>
