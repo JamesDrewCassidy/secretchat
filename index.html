@@ -2,84 +2,154 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Ensure IE uses the latest engine -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Set viewport for responsive design -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Content Security Policy for enhanced security -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline';">
   <title>Encrypted Chat Room</title>
-  <!-- Include CryptoJS and PeerJS from CDNs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <!-- Include external libraries with defer for nonblocking load -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script defer src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <style>
-    /* Inline CSS for responsiveness and styling */
+    /* Global Styles */
     body {
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      background: linear-gradient(135deg, #f2f2f2, #e6e6e6);
+      margin: 0;
+      padding: 0;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      margin: 0;
     }
+    /* Loader Overlay */
+    .loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #4CAF50;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    /* Chat Container */
     .chat-container {
       width: 90%;
       max-width: 600px;
       background: #fff;
       border: 1px solid #ddd;
-      padding: 10px;
+      border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
       height: 80vh;
+      overflow: hidden;
     }
+    /* Chat Header */
     .chat-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #ccc;
+      padding: 10px;
+      background: #4CAF50;
+      color: #fff;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
     }
     .chat-header h2 {
       margin: 0;
+      font-size: 1.2em;
     }
     .controls button {
       margin-left: 5px;
       padding: 5px 10px;
       font-size: 0.9em;
+      border: none;
+      border-radius: 4px;
       cursor: pointer;
+      background: #fff;
+      color: #4CAF50;
+      transition: background 0.3s, color 0.3s;
     }
+    .controls button:hover {
+      background: #e6e6e6;
+    }
+    /* Chat Log */
     .chat-log {
       flex: 1;
       overflow-y: auto;
-      border: 1px solid #ccc;
       padding: 10px;
-      margin: 10px 0;
       background: #fafafa;
     }
+    .chat-log p {
+      margin: 5px 0;
+    }
+    /* Chat Form */
     #chat-form {
       display: flex;
+      border-top: 1px solid #ddd;
     }
     #chat-input {
       flex: 1;
       padding: 10px;
       font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 4px 0 0 4px;
+      border: none;
+      outline: none;
     }
     button[type="submit"] {
       padding: 10px;
       font-size: 1em;
-      border: 1px solid #ccc;
-      border-left: none;
+      border: none;
       background: #4CAF50;
       color: #fff;
-      border-radius: 0 4px 4px 0;
       cursor: pointer;
+      transition: background 0.3s;
     }
     button[type="submit"]:hover {
       background: #45a049;
     }
+    /* Responsive Adjustments */
+    @media (max-width: 600px) {
+      .chat-container {
+        height: 90vh;
+      }
+      .chat-header h2 {
+        font-size: 1em;
+      }
+      #chat-input, button[type="submit"], .controls button {
+        font-size: 0.9em;
+        padding: 8px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="chat-container">
+  <!-- Loader displayed until PeerJS is ready -->
+  <div id="loader" class="loader">
+    <div class="spinner"></div>
+    <p>Loading chat...</p>
+  </div>
+  <!-- Chat App Container -->
+  <div class="chat-container" id="chatApp">
     <div class="chat-header">
       <h2>Encrypted Chat Room</h2>
       <div class="controls">
@@ -94,15 +164,12 @@
       <button type="submit">Send</button>
     </form>
   </div>
-  <script>
+  <script defer>
     'use strict';
-    // Shared secret key for encryption (demo only)
+    // Shared secret key for encryption (for demonstration only; consider key management improvements)
     const SECRET_KEY = 'mySuperSecretKey123!';
-    // PeerJS and connection variables
-    let peer;
-    let conn = null;
-    // User nickname (stored in localStorage)
-    let nickname = '';
+    // PeerJS connection and user variables
+    let peer, conn = null, nickname = '';
     // DOM Elements
     const chatLog = document.getElementById('chat-log');
     const chatForm = document.getElementById('chat-form');
@@ -110,8 +177,9 @@
     const showIdBtn = document.getElementById('show-id-btn');
     const connectBtn = document.getElementById('connect-btn');
     const copyLinkBtn = document.getElementById('copy-link-btn');
+    const loader = document.getElementById('loader');
 
-    // Prompt for nickname if not set already
+    // Prompt for nickname (stored in localStorage)
     function promptNickname() {
       nickname = localStorage.getItem('chatNickname') || prompt("Enter your nickname:");
       if (!nickname || nickname.trim() === '') {
@@ -121,10 +189,11 @@
       displayMessage('System', `Your nickname is set to "${nickname}"`);
     }
 
-    // Encryption helpers using CryptoJS
+    // Encrypt a message using CryptoJS
     function encryptMessage(message) {
       return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
     }
+    // Decrypt a message using CryptoJS
     function decryptMessage(ciphertext) {
       try {
         const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
@@ -135,7 +204,7 @@
       }
     }
 
-    // Append a message to the chat log with a timestamp
+    // Append a message with timestamp to the chat log
     function displayMessage(sender, message) {
       const timestamp = new Date().toLocaleTimeString();
       const messageElem = document.createElement('p');
@@ -144,14 +213,14 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Initialize the PeerJS connection
+    // Initialize PeerJS and hide loader when ready
     function initPeer() {
       peer = new Peer();
       peer.on('open', id => {
         displayMessage('System', `Your Peer ID is: ${id}`);
         console.log('My peer ID is:', id);
+        loader.style.display = 'none'; // Hide loader on successful connection
       });
-      // Accept incoming connections
       peer.on('connection', connection => {
         conn = connection;
         setupConnectionHandlers();
@@ -162,7 +231,7 @@
       });
     }
 
-    // Set up handlers for the PeerJS connection
+    // Setup event handlers for the PeerJS connection
     function setupConnectionHandlers() {
       if (!conn) return;
       conn.on('data', data => {
@@ -182,7 +251,7 @@
       });
     }
 
-    // Manually connect to another peer by prompting for their Peer ID
+    // Prompt for a friend's Peer ID and attempt to connect
     function connectToPeer() {
       const friendId = prompt("Enter friend's Peer ID:");
       if (friendId && friendId.trim() !== '') {
@@ -208,7 +277,7 @@
       chatInput.value = '';
     });
 
-    // Show My ID button: display current Peer ID
+    // Show My ID button: display the current Peer ID
     showIdBtn.addEventListener('click', () => {
       if (peer && peer.id) {
         alert("Your Peer ID is: " + peer.id);
@@ -217,25 +286,31 @@
       }
     });
 
-    // Connect button: prompt to connect to a friend's Peer ID
+    // Connect button: prompt to connect to another Peer
     connectBtn.addEventListener('click', () => {
       connectToPeer();
     });
 
-    // Copy Chat Link button: copy the current URL to clipboard
+    // Copy Chat Link button: copy the current URL to clipboard (with fallback)
     copyLinkBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert("Chat link copied to clipboard!"))
-        .catch(err => {
-          console.error("Failed to copy link:", err);
-          alert("Failed to copy link.");
-        });
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(window.location.href)
+          .then(() => alert("Chat link copied to clipboard!"))
+          .catch(err => {
+            console.error("Failed to copy link:", err);
+            alert("Failed to copy link.");
+          });
+      } else {
+        // Fallback for insecure contexts
+        prompt("Copy the chat link:", window.location.href);
+      }
     });
 
-    // On page load, prompt for nickname and initialize PeerJS
+    // On window load, prompt for nickname and initialize PeerJS
     window.addEventListener('load', () => {
       promptNickname();
       initPeer();
+      console.log("Encrypted Chat App loaded and ready.");
     });
   </script>
 </body>
