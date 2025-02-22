@@ -11,8 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
   <meta name="theme-color" content="#1C1C1C">
-  
-  <!-- Updated Content Security Policy to allow YouTube -->
+  <!-- Updated Content Security Policy to allow YouTube and CDN assets -->
   <meta http-equiv="Content-Security-Policy" content="
       default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com https://www.youtube.com;
       script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline' 'unsafe-eval';
@@ -20,7 +19,6 @@
       connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://cdnjs.cloudflare.com https://unpkg.com;
       img-src 'self' data:;
   ">
-  
   <!-- Manifest -->
   <link rel="manifest" id="pwa-manifest" href="#">
   <title>🔒 Top Secret Chat</title>
@@ -31,16 +29,16 @@
   
   <style>
     :root {
-      --primary: #556B2F; /* Dark olive green for a tactical feel */
+      --primary: #556B2F; /* Dark olive green */
       --accent:  #8FBC8F; /* Lighter green accent */
       --bg-light: #2E2E2E; /* Panel backgrounds */
       --bg-dark: #1C1C1C;  /* Main background */
-      --text-light: #FFFFFF; /* Brighter text for improved readability */
+      --text-light: #FFFFFF; /* Brighter text */
       --card-bg: #2E2E2E;
       --border: #3A3A3A;
       --transition: 0.3s;
     }
-    /* Overall Body Background with Subtle Gradient */
+    /* Global Body Styles */
     body {
       font-family: 'Segoe UI', sans-serif;
       background: linear-gradient(135deg, #1C1C1C 0%, #121212 100%);
@@ -102,10 +100,7 @@
       user-select: none;
       animation: watermarkFade 5s infinite alternate;
     }
-    @keyframes watermarkFade {
-      from { opacity: 0.05; }
-      to { opacity: 0.15; }
-    }
+    @keyframes watermarkFade { from { opacity: 0.05; } to { opacity: 0.15; } }
     .chat-header {
       background: var(--primary);
       padding: 15px;
@@ -125,10 +120,7 @@
       gap: 10px;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
     }
-    .chat-header h2::before {
-      content: "🔒";
-      font-size: 1.2em;
-    }
+    .chat-header h2::before { content: "🔒"; font-size: 1.2em; }
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -147,11 +139,7 @@
     }
     .controls button:hover { background: var(--accent); color: #fff; }
     .controls button:focus { outline: none; box-shadow: 0 0 5px var(--accent); }
-    .passphrase-group, .mode-toggle {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
+    .passphrase-group, .mode-toggle { display: flex; align-items: center; gap: 5px; }
     #passphrase-input {
       padding: 6px;
       font-size: 0.9em;
@@ -176,26 +164,12 @@
       line-height: 1.4;
       animation: fadeIn 0.5s ease-out;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .chat-log .system { color: var(--accent); }
-    /* Custom Scrollbar Styling */
-    .chat-log::-webkit-scrollbar {
-      width: 8px;
-    }
-    .chat-log::-webkit-scrollbar-track {
-      background: var(--bg-light);
-    }
-    .chat-log::-webkit-scrollbar-thumb {
-      background-color: var(--primary);
-      border-radius: 4px;
-    }
-    #chat-form {
-      display: flex;
-      border-top: 1px solid var(--border);
-    }
+    .chat-log::-webkit-scrollbar { width: 8px; }
+    .chat-log::-webkit-scrollbar-track { background: var(--bg-light); }
+    .chat-log::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 4px; }
+    #chat-form { display: flex; border-top: 1px solid var(--border); }
     #chat-input {
       flex: 1;
       padding: 12px;
@@ -216,7 +190,7 @@
       transition: background var(--transition);
     }
     button[type="submit"]:hover { background: var(--accent); }
-    /* Decoy UI: Full-screen overlay for YouTube */
+    /* Decoy UI */
     #decoy-ui {
       display: none;
       position: fixed;
@@ -229,11 +203,7 @@
       margin: 0;
       padding: 0;
     }
-    #decoy-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    #decoy-iframe { width: 100%; height: 100%; border: none; }
     #exit-decoy {
       position: fixed;
       top: 15px;
@@ -248,7 +218,6 @@
       transition: background var(--transition);
     }
     #exit-decoy:hover { background: var(--accent); }
-    /* Instructions Overlay */
     .instructions {
       background: rgba(0, 0, 0, 0.7);
       padding: 10px 15px;
@@ -268,6 +237,46 @@
       .chat-header h2 { font-size: 1.5em; }
       #chat-input, button[type="submit"], .controls button { font-size: 0.9em; padding: 8px; }
     }
+    /* Login Modal Styles */
+    .login-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+    .login-content {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .login-content input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+    .login-content button {
+      padding: 10px 20px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .login-content button:hover { background: var(--accent); }
   </style>
 </head>
 <body>
@@ -277,8 +286,18 @@
     <p>Decrypting secrets...</p>
   </div>
 
+  <!-- Login Modal -->
+  <div id="login-modal" class="login-modal">
+    <div class="login-content">
+      <h2>Welcome to Top Secret Chat</h2>
+      <input type="text" id="nickname-input" placeholder="Enter your nickname">
+      <input type="password" id="passphrase-input-modal" placeholder="Enter passphrase">
+      <button id="login-btn">Enter Chat</button>
+    </div>
+  </div>
+
   <!-- Chat App -->
-  <div class="chat-container" id="chatApp">
+  <div class="chat-container" id="chatApp" style="display: none;">
     <div class="chat-header">
       <h2>Top Secret Chat</h2>
       <div class="controls">
@@ -311,47 +330,24 @@
     </div>
   </div>
 
-  <!-- External Libraries -->
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-
-  <!-- Service Worker & Manifest Setup -->
-  <script>
-    const manifestJson = {
-      "name": "Top Secret Chat",
-      "short_name": "SecretChat",
-      "start_url": ".",
-      "display": "standalone",
-      "background_color": "#1C1C1C",
-      "theme_color": "#556B2F",
-      "icons": [{
-        "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDUzNSA1MzUiIHhtbDpzcGFjZS1jYXNvPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHlsZT0iYmFja2dyb3VuZDogI2ZmZjsiPjxwYXRoIGZpbGw9IiM1NTZCMkYiIGQ9Ik0xMjUgMTI1aDI4NnYyODZIMTI1eiIvPjxwYXRoIGZpbGw9IiM4RkJDOEYiIGQ9Ik0xMjUgMTI1aDUzNnYyODZIMTI1eiIgb3BhY2l0eT0iMC4yIi8+PC9zdmc+",
-        "sizes": "300x300",
-        "type": "image/svg+xml"
-      }]
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifestJson)], {type: 'application/json'});
-    const manifestUrl = URL.createObjectURL(manifestBlob);
-    document.getElementById('pwa-manifest').setAttribute('href', manifestUrl);
-    
-    const SW_CODE = `
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open('secret-chat-v1').then(cache => cache.addAll(['./'])));
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(response => response || fetch(e.request)));
-});
-`;
+  <!-- External Libraries (loaded with defer for improved page speed) -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js" defer></script>
+  
+  <!-- Service Worker Registration -->
+  <script defer>
     if ('serviceWorker' in navigator) {
-      const swBlob = new Blob([SW_CODE], { type: 'text/javascript' });
-      const swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl)
+      navigator.serviceWorker.register('sw.js')
         .then(() => console.log('Service Worker Registered'))
         .catch(err => console.log('Service Worker Error:', err));
     }
   </script>
 
-  <script>
+  <script defer>
     'use strict';
+    // Global encoder/decoder to speed up text operations
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
     let ecPrivateKey = null;
     let ecPublicKeyJwk = null;
     let sessionKey = null;
@@ -363,14 +359,18 @@ self.addEventListener('fetch', e => {
     let messageCount = 0;
 
     async function generateEphemeralKeys() {
-      const keyPair = await crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        ["deriveKey", "deriveBits"]
-      );
-      ecPrivateKey = keyPair.privateKey;
-      ecPublicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-      console.log("Ephemeral keys generated.");
+      try {
+        const keyPair = await crypto.subtle.generateKey(
+          { name: "ECDH", namedCurve: "P-256" },
+          true,
+          ["deriveKey", "deriveBits"]
+        );
+        ecPrivateKey = keyPair.privateKey;
+        ecPublicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+        console.log("Ephemeral keys generated.");
+      } catch (err) {
+        console.error("Key generation error:", err);
+      }
     }
 
     async function deriveAesKey(peerPubJwk) {
@@ -403,10 +403,15 @@ self.addEventListener('fetch', e => {
 
     async function encryptMessage(plaintext) {
       if (!sessionKey) return null;
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const data = new TextEncoder().encode(plaintext);
-      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sessionKey, data);
-      return btoa(String.fromCharCode(...iv)) + ":" + btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+      try {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const data = encoder.encode(plaintext);
+        const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sessionKey, data);
+        return btoa(String.fromCharCode(...iv)) + ":" + btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+      } catch (err) {
+        console.error("Encryption error:", err);
+        return null;
+      }
     }
 
     async function decryptMessage(payload) {
@@ -417,7 +422,7 @@ self.addEventListener('fetch', e => {
         const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
         const ciph = Uint8Array.from(atob(ciphB64), c => c.charCodeAt(0));
         const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, sessionKey, ciph);
-        return new TextDecoder().decode(decrypted);
+        return decoder.decode(decrypted);
       } catch (err) {
         console.error("decryptMessage error:", err);
         return "[Decryption error]";
@@ -569,6 +574,7 @@ self.addEventListener('fetch', e => {
     });
     darkModeSwitch.addEventListener('change', () => {
       document.body.classList.toggle('dark', darkModeSwitch.checked);
+      localStorage.setItem('darkMode', darkModeSwitch.checked);
     });
     passphraseInput.addEventListener('input', () => { userPass = passphraseInput.value.trim(); });
     decoyBtn.addEventListener('click', () => {
@@ -583,34 +589,8 @@ self.addEventListener('fetch', e => {
         conn.send({ type: 'handshake', pubKey: ecPublicKeyJwk, passphrase: userPass });
       }
     }
-    function secureShred(variable) {
-      if (typeof variable === "string") {
-        let scrambled = "";
-        for (let i = 0; i < variable.length; i++) {
-          scrambled += String.fromCharCode(crypto.getRandomValues(new Uint8Array(1))[0]);
-        }
-        return scrambled;
-      } else if (Array.isArray(variable)) {
-        for (let i = 0; i < variable.length; i++) {
-          variable[i] = crypto.getRandomValues(new Uint8Array(1))[0];
-        }
-        return variable;
-      }
-      return null;
-    }
-    function secureWipe() {
-      for (let i = 0; i < 3; i++) {
-        userPass = secureShred(userPass);
-        nickname = secureShred(nickname);
-      }
-      userPass = ""; nickname = "";
-      ecPrivateKey = ecPublicKeyJwk = sessionKey = null;
-      messages = secureShred(messages) || [];
-      chatLog.innerHTML = "";
-      if (conn && conn.close) conn.close();
-      console.log("Secure wipe executed.");
-    }
-    window.addEventListener("beforeunload", secureWipe);
+    // Removed beforeunload secure wipe to preserve session
+    
     function showInstructions() {
       const instructions = document.createElement('div');
       instructions.className = 'instructions';
@@ -621,34 +601,32 @@ self.addEventListener('fetch', e => {
         setTimeout(() => { instructions.remove(); }, 500);
       }, 5000);
     }
-    window.addEventListener('DOMContentLoaded', async () => {
-      darkModeSwitch.checked = true;
-      document.body.classList.add('dark');
-      const params = new URLSearchParams(window.location.search);
-      const joinId = params.get('join');
-      let tempNick = "";
-      while (!tempNick) {
-        tempNick = prompt("Enter your nickname:") || "";
+    // Handle login modal submission for a better UX
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const nickInput = document.getElementById('nickname-input').value.trim();
+      const passInput = document.getElementById('passphrase-input-modal').value.trim();
+      if (!nickInput || !passInput) {
+        alert("Please enter both nickname and passphrase.");
+        return;
       }
-      nickname = tempNick;
-      let tempPass = "";
-      if (joinId) {
-        while (!tempPass) {
-          tempPass = prompt("Enter the passphrase provided by your friend:") || "";
-        }
-      } else {
-        while (!tempPass) {
-          tempPass = prompt("Set a passphrase for your chat:") || "";
-        }
-      }
-      userPass = tempPass;
+      nickname = nickInput;
+      userPass = passInput;
+      // Hide login modal and show chat app
+      document.getElementById('login-modal').style.display = 'none';
+      document.getElementById('chatApp').style.display = 'flex';
       addMessage('System', `Your nickname is "${nickname}"`);
-      passphraseInput.value = userPass;
+      document.getElementById('passphrase-input').value = userPass;
       await generateEphemeralKeys();
       initPeer();
       showInstructions();
       loader.style.display = 'none';
-      console.log("Top Secret Chat loaded.");
+    });
+    // Restore dark mode setting if enabled
+    document.addEventListener('DOMContentLoaded', () => {
+      if(localStorage.getItem('darkMode') === 'true') {
+        darkModeSwitch.checked = true;
+        document.body.classList.add('dark');
+      }
     });
   </script>
 </body>
