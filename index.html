@@ -303,7 +303,8 @@
       <div class="controls">
         <button id="show-id-btn" title="Display your unique Peer ID">Show My ID</button>
         <button id="connect-btn" title="Connect to a friend using their Peer ID">Connect</button>
-        <button id="invite-btn" title="Copy invite link to clipboard" disabled>Copy Invite Link</button>
+        <!-- Updated invite button now uses Web Share API -->
+        <button id="invite-btn" title="Share invite link">Invite</button>
         <button id="decoy-btn" title="Activate decoy mode to hide chat">Decoy Mode</button>
         <div class="passphrase-group">
           <label for="passphrase-input">Pass:</label>
@@ -548,15 +549,45 @@
       alert(peer && peer.id ? "Your Peer ID is: " + peer.id : "Peer not initialized yet.");
     });
     connectBtn.addEventListener('click', connectToPeer);
-    inviteBtn.addEventListener('click', () => {
-      if (!peer || !peer.id) { alert("Peer ID not available yet."); return; }
+    
+    // Updated invite button: use Web Share API if available so the chat initiator doesn't leave the browser.
+    inviteBtn.addEventListener('click', async () => {
+      if (!peer || !peer.id) { 
+        alert("Peer ID not available yet."); 
+        return; 
+      }
       const joinUrl = `${window.location.origin}${window.location.pathname}?join=${peer.id}`;
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(joinUrl)
-          .then(() => alert("Invite link copied!"))
-          .catch(err => { console.error("Copy failed:", err); alert("Copy failed."); });
-      } else { prompt("Copy this invite link:", joinUrl); }
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Join my Secret Chat",
+            text: "Click the link to join my secret chat session.",
+            url: joinUrl
+          });
+          console.log("Invite link shared successfully.");
+        } catch (err) {
+          console.error("Error sharing link:", err);
+          // Fallback to copy method if share fails
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(joinUrl)
+              .then(() => alert("Invite link copied!"))
+              .catch(err => { console.error("Copy failed:", err); alert("Copy failed."); });
+          } else {
+            prompt("Copy this invite link:", joinUrl);
+          }
+        }
+      } else {
+        // Fallback to copy if Web Share API is not available
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(joinUrl)
+            .then(() => alert("Invite link copied!"))
+            .catch(err => { console.error("Copy failed:", err); alert("Copy failed."); });
+        } else {
+          prompt("Copy this invite link:", joinUrl);
+        }
+      }
     });
+    
     chatForm.addEventListener('submit', async e => {
       e.preventDefault();
       const message = chatInput.value.trim();
@@ -572,6 +603,7 @@
       }
       chatInput.value = '';
     });
+    
     darkModeSwitch.addEventListener('change', () => {
       document.body.classList.toggle('dark', darkModeSwitch.checked);
       localStorage.setItem('darkMode', darkModeSwitch.checked);
@@ -583,6 +615,7 @@
     document.getElementById('exit-decoy').addEventListener('click', () => {
       document.getElementById('decoy-ui').style.display = 'none';
     });
+    
     async function rotateKeys() {
       await generateEphemeralKeys();
       if (conn && conn.open) {
@@ -601,6 +634,7 @@
         setTimeout(() => { instructions.remove(); }, 500);
       }, 5000);
     }
+    
     // Handle login modal submission for a better UX
     document.getElementById('login-btn').addEventListener('click', async () => {
       const nickInput = document.getElementById('nickname-input').value.trim();
@@ -621,6 +655,7 @@
       showInstructions();
       loader.style.display = 'none';
     });
+    
     // Restore dark mode setting if enabled
     document.addEventListener('DOMContentLoaded', () => {
       if(localStorage.getItem('darkMode') === 'true') {
