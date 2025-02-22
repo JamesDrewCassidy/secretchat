@@ -10,19 +10,22 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
-  <!-- Content Security Policy for enhanced security -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline';">
+  <!-- Content Security Policy -->
+  <!-- Note: Includes 'unsafe-inline' and 'unsafe-eval' to accommodate inline JS and CryptoJS/PeerJS usage -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; 
+                 script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline' 'unsafe-eval'; 
+                 style-src 'self' 'unsafe-inline'; 
+                 connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://cdnjs.cloudflare.com https://unpkg.com;
+                 img-src 'self' data:;">
   <title>Encrypted Chat Room</title>
-  <!-- Preconnect hints for faster resource loading -->
+  <!-- Preconnect for faster resource loading -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://unpkg.com">
-  <!-- Inline Manifest for Progressive Web App support -->
-  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Encrypted%20Chat%20Room%22%2C%22short_name%22%3A%22Chat%22%2C%22start_url%22%3A%22/secretchat/%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%234CAF50%22%7D">
+  <!-- Inline Manifest for Mobile/PWA Support -->
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Encrypted%20Chat%20Room%22%2C%22short_name%22%3A%22Chat%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%234CAF50%22%7D">
   <!-- Apple Touch Icon -->
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='%23ffffff'%3EChat%3C/text%3E%3C/svg%3E">
-  <!-- External libraries loaded with defer -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script defer src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <style>
     /* Global Styles */
     body {
@@ -38,23 +41,18 @@
     /* Loader Overlay */
     .loader {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background: rgba(255,255,255,0.85);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
       z-index: 1000;
     }
     .spinner {
       border: 6px solid #f3f3f3;
       border-top: 6px solid #4CAF50;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       animation: spin 1s linear infinite;
       margin-bottom: 10px;
     }
@@ -154,7 +152,7 @@
   </style>
 </head>
 <body>
-  <!-- Loader displayed until PeerJS initializes -->
+  <!-- Loader displayed until DOMContentLoaded, so user sees UI quickly -->
   <div id="loader" class="loader">
     <div class="spinner"></div>
     <p>Loading chat...</p>
@@ -175,20 +173,27 @@
       <button type="submit">Send</button>
     </form>
   </div>
-  <script defer>
+
+  <!-- External libraries (no defer so the UI can be displayed while scripts load) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+  <!-- Main Chat Logic -->
+  <script>
     'use strict';
-    // Shared secret key for encryption (demo only; consider secure key exchange for production)
+
+    // Shared secret key for encryption (demo only; consider secure key exchange in production)
     const SECRET_KEY = 'mySuperSecretKey123!';
-    // PeerJS connection and user variables
     let peer, conn = null, nickname = '';
+
     // DOM Elements
+    const loader = document.getElementById('loader');
     const chatLog = document.getElementById('chat-log');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const showIdBtn = document.getElementById('show-id-btn');
     const connectBtn = document.getElementById('connect-btn');
     const copyLinkBtn = document.getElementById('copy-link-btn');
-    const loader = document.getElementById('loader');
 
     // Prompt for nickname (saved in localStorage)
     function promptNickname() {
@@ -198,11 +203,10 @@
       displayMessage('System', `Your nickname is set to "${nickname}"`);
     }
 
-    // Encrypt a message using CryptoJS
+    // Encryption helpers with CryptoJS
     function encryptMessage(message) {
       return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
     }
-    // Decrypt a message using CryptoJS
     function decryptMessage(ciphertext) {
       try {
         const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
@@ -213,7 +217,7 @@
       }
     }
 
-    // Append a message with timestamp to the chat log
+    // Display a message in the chat log
     function displayMessage(sender, message) {
       const timestamp = new Date().toLocaleTimeString();
       const messageElem = document.createElement('p');
@@ -222,25 +226,29 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Initialize PeerJS and hide loader when ready
+    // Initialize PeerJS
     function initPeer() {
-      peer = new Peer();
-      peer.on('open', id => {
-        displayMessage('System', `Your Peer ID is: ${id}`);
-        console.log('My peer ID is:', id);
-        loader.style.display = 'none'; // Hide loader when connection is ready
-      });
-      peer.on('connection', connection => {
-        conn = connection;
-        setupConnectionHandlers();
-      });
-      peer.on('error', err => {
-        console.error('Peer error:', err);
-        displayMessage('System', 'Peer error: ' + err);
-      });
+      try {
+        peer = new Peer();
+        peer.on('open', id => {
+          displayMessage('System', `Your Peer ID is: ${id}`);
+          console.log('My peer ID is:', id);
+        });
+        peer.on('connection', connection => {
+          conn = connection;
+          setupConnectionHandlers();
+        });
+        peer.on('error', err => {
+          console.error('Peer error:', err);
+          displayMessage('System', 'Peer error: ' + err);
+        });
+      } catch (error) {
+        console.error('PeerJS init error:', error);
+        displayMessage('System', 'PeerJS failed to initialize.');
+      }
     }
 
-    // Setup PeerJS connection handlers
+    // Set up PeerJS connection handlers
     function setupConnectionHandlers() {
       if (!conn) return;
       conn.on('data', data => {
@@ -271,7 +279,7 @@
       }
     }
 
-    // Event listener: Send chat message on form submission
+    // Listen for chat form submission
     chatForm.addEventListener('submit', e => {
       e.preventDefault();
       const message = chatInput.value.trim();
@@ -286,7 +294,7 @@
       chatInput.value = '';
     });
 
-    // Show My ID button: display current Peer ID
+    // Show My ID button
     showIdBtn.addEventListener('click', () => {
       if (peer && peer.id) {
         alert("Your Peer ID is: " + peer.id);
@@ -295,12 +303,12 @@
       }
     });
 
-    // Connect button: prompt to connect to another Peer
+    // Connect button
     connectBtn.addEventListener('click', () => {
       connectToPeer();
     });
 
-    // Copy Chat Link button: copy current URL to clipboard with fallback
+    // Copy Chat Link button (with fallback)
     copyLinkBtn.addEventListener('click', () => {
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(window.location.href)
@@ -314,11 +322,13 @@
       }
     });
 
-    // On window load, prompt for nickname and initialize PeerJS
-    window.addEventListener('load', () => {
+    // Hide loader and init chat once DOM is ready
+    window.addEventListener('DOMContentLoaded', () => {
+      // Immediately hide loader so UI is visible
+      loader.style.display = 'none';
       promptNickname();
       initPeer();
-      console.log("Encrypted Chat App loaded and ready.");
+      console.log("Encrypted Chat App loaded and UI displayed.");
     });
   </script>
 </body>
