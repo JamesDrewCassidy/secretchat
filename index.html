@@ -10,15 +10,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
-
+  
   <!-- Prevent old caching -->
   <meta http-equiv="Cache-control" content="no-cache, no-store, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-
+  
   <!-- Content Security Policy -->
-  <!-- Includes 'unsafe-inline' and 'unsafe-eval' for CryptoJS & PeerJS usage -->
-  <!-- Adds connect-src for PeerJS signaling. Adjust if your STUN/TURN servers differ. -->
   <meta http-equiv="Content-Security-Policy" 
         content="
           default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; 
@@ -27,7 +25,7 @@
           connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://cdnjs.cloudflare.com https://unpkg.com; 
           img-src 'self' data:;
         ">
-
+  
   <title>Encrypted Chat Room</title>
 
   <!-- Preconnect for faster resource loading -->
@@ -36,10 +34,10 @@
 
   <!-- Inline Manifest for Mobile/PWA Support -->
   <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Encrypted%20Chat%20Room%22%2C%22short_name%22%3A%22Chat%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%234CAF50%22%7D">
-
+  
   <!-- Apple Touch Icon -->
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%234CAF50'/%3E%3Ctext x='50' y='60' font-size='40' text-anchor='middle' fill='%23ffffff'%3EChat%3C/text%3E%3C/svg%3E">
-
+  
   <style>
     /* Global Styles */
     body {
@@ -47,9 +45,7 @@
       background: linear-gradient(135deg, #f2f2f2, #e6e6e6);
       margin: 0; padding: 0;
       height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex; justify-content: center; align-items: center;
     }
     /* Loader Overlay */
     .loader {
@@ -80,10 +76,8 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      height: 80vh;
-      overflow: hidden;
+      display: flex; flex-direction: column;
+      height: 80vh; overflow: hidden;
     }
     /* Chat Header */
     .chat-header {
@@ -114,9 +108,8 @@
       border: none; outline: none;
     }
     button[type="submit"] {
-      padding: 10px; font-size: 1em;
-      border: none; background: #4CAF50;
-      color: #fff; cursor: pointer; transition: background 0.3s;
+      padding: 10px; font-size: 1em; border: none;
+      background: #4CAF50; color: #fff; cursor: pointer; transition: background 0.3s;
     }
     button[type="submit"]:hover { background: #45a049; }
     /* Responsive Adjustments */
@@ -135,7 +128,7 @@
     <div class="spinner"></div>
     <p>Loading chat...</p>
   </div>
-
+  
   <!-- Chat App Container -->
   <div class="chat-container" id="chatApp">
     <div class="chat-header">
@@ -143,7 +136,8 @@
       <div class="controls">
         <button id="show-id-btn">Show My ID</button>
         <button id="connect-btn">Connect to Peer</button>
-        <button id="copy-link-btn">Copy Chat Link</button>
+        <!-- New button to copy direct invite link -->
+        <button id="invite-btn">Copy Invite Link</button>
       </div>
     </div>
     <div id="chat-log" class="chat-log"></div>
@@ -152,18 +146,14 @@
       <button type="submit">Send</button>
     </form>
   </div>
+  
+  <!-- Versioned script references to avoid caching -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js?v=2.0.0"></script>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js?v=2.0.0"></script>
 
-  <!-- 
-    Versioned script references (append ?v= to ensure browsers re-fetch on each update).
-    Bump the version whenever you make changes.
-  -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js?v=1.0.0"></script>
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js?v=1.0.0"></script>
-
-  <!-- Main Chat Logic with no caching approach -->
   <script>
     'use strict';
-    // Shared secret key (demo only; consider secure key exchange in production)
+    // Shared secret key (demo only)
     const SECRET_KEY = 'mySuperSecretKey123!';
     let peer, conn = null, nickname = '';
 
@@ -174,7 +164,7 @@
     const chatInput = document.getElementById('chat-input');
     const showIdBtn = document.getElementById('show-id-btn');
     const connectBtn = document.getElementById('connect-btn');
-    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const inviteBtn = document.getElementById('invite-btn');
 
     // Prompt for nickname (saved in localStorage)
     function promptNickname() {
@@ -214,6 +204,8 @@
         peer.on('open', id => {
           displayMessage('System', `Your Peer ID is: ${id}`);
           console.log('My peer ID is:', id);
+          // Enable the invite button once we have a Peer ID
+          inviteBtn.disabled = false;
         });
         peer.on('connection', connection => {
           conn = connection;
@@ -260,6 +252,17 @@
       }
     }
 
+    // Directly connect if there's a ?join=<peerId> in the URL
+    function autoJoinIfNeeded() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const joinId = urlParams.get('join');
+      if (joinId) {
+        displayMessage('System', `Auto-joining peer: ${joinId}`);
+        conn = peer.connect(joinId);
+        setupConnectionHandlers();
+      }
+    }
+
     // Listen for chat form submission
     chatForm.addEventListener('submit', e => {
       e.preventDefault();
@@ -289,29 +292,39 @@
       connectToPeer();
     });
 
-    // Copy Chat Link button (with fallback)
-    copyLinkBtn.addEventListener('click', () => {
+    // Invite button: copies a direct link with ?join=<peerId> 
+    inviteBtn.addEventListener('click', () => {
+      if (!peer || !peer.id) {
+        alert("Peer ID not available yet.");
+        return;
+      }
+      // Construct a link that automatically connects to me
+      const joinUrl = `${window.location.origin}${window.location.pathname}?join=${peer.id}`;
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(window.location.href)
-          .then(() => alert("Chat link copied to clipboard!"))
+        navigator.clipboard.writeText(joinUrl)
+          .then(() => alert("Invite link copied to clipboard!"))
           .catch(err => {
             console.error("Failed to copy link:", err);
             alert("Failed to copy link.");
           });
       } else {
-        prompt("Copy the chat link:", window.location.href);
+        prompt("Copy the invite link:", joinUrl);
       }
     });
 
-    // Hide loader and initialize chat once DOM is ready
+    // Hide loader & init chat after DOM is ready
     window.addEventListener('DOMContentLoaded', () => {
-      loader.style.display = 'none'; // Show UI immediately
+      // Immediately hide loader so UI is visible
+      document.getElementById('loader').style.display = 'none';
+      inviteBtn.disabled = true; // Disabled until we get a Peer ID
       promptNickname();
       initPeer();
-      console.log("Encrypted Chat App loaded. Caching is disabled, so updates appear immediately!");
+      // Attempt auto-join if the user clicked an invite link
+      setTimeout(autoJoinIfNeeded, 500);
+      console.log("Encrypted Chat App loaded with direct invite feature.");
     });
 
-    // Register service worker for cache-busting updates
+    // Register service worker for immediate updates
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
         .then(reg => console.log("Service Worker registered:", reg.scope))
