@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Force the latest rendering engine in IE -->
+  <!-- Force latest rendering engine -->
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <!-- Responsive viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,185 +10,420 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
-
-  <!-- Basic Content Security Policy
-       'unsafe-inline' & 'unsafe-eval' needed for CryptoJS & PeerJS
-  -->
-  <meta http-equiv="Content-Security-Policy" 
-        content="
-          default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; 
-          script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline' 'unsafe-eval'; 
-          style-src 'self' 'unsafe-inline'; 
-          connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://cdnjs.cloudflare.com https://unpkg.com; 
-          img-src 'self' data:;
-        ">
-  <title>Encrypted Chat Room</title>
-
-  <!-- Preconnect for performance -->
+  <meta name="theme-color" content="#1C1C1C">
+  
+  <!-- Updated Content Security Policy to allow YouTube -->
+  <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' https://cdnjs.cloudflare.com https://unpkg.com https://www.youtube.com;
+      script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline' 'unsafe-eval';
+      style-src 'self' 'unsafe-inline';
+      connect-src 'self' https://0.peerjs.com wss://0.peerjs.com https://cdnjs.cloudflare.com https://unpkg.com;
+      img-src 'self' data:;
+  ">
+  
+  <!-- Manifest -->
+  <link rel="manifest" id="pwa-manifest" href="#">
+  <title>🔒 Top Secret Chat</title>
+  
+  <!-- Preconnect -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://unpkg.com">
-
+  
   <style>
-    /* Global Styles */
+    :root {
+      --primary: #556B2F; /* Dark olive green for a tactical feel */
+      --accent:  #8FBC8F; /* Lighter green accent */
+      --bg-light: #2E2E2E; /* Panel backgrounds */
+      --bg-dark: #1C1C1C;  /* Main background */
+      --text-light: #FFFFFF; /* Brighter text for improved readability */
+      --card-bg: #2E2E2E;
+      --border: #3A3A3A;
+      --transition: 0.3s;
+    }
+    /* Overall Body Background with Subtle Gradient */
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #f2f2f2, #e6e6e6);
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1C1C1C 0%, #121212 100%);
       margin: 0;
-      padding: 0;
       height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
+      color: var(--text-light);
     }
-    /* Loader Overlay */
+    body.dark {
+      background: linear-gradient(135deg, #1C1C1C 0%, #121212 100%);
+      color: var(--text-light);
+    }
     .loader {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(255,255,255,0.85);
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       z-index: 1000;
+      color: var(--text-light);
     }
     .spinner {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #4CAF50;
+      border: 6px solid #444;
+      border-top: 6px solid var(--primary);
       border-radius: 50%;
-      width: 40px; height: 40px;
+      width: 50px; height: 50px;
       animation: spin 1s linear infinite;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    /* Chat Container */
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .chat-container {
       width: 90%; max-width: 600px;
-      background: #fff;
-      border: 1px solid #ddd;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
       height: 80vh;
       overflow: hidden;
+      position: relative;
+      transition: box-shadow var(--transition);
     }
-    /* Chat Header */
+    .chat-container:hover { box-shadow: 0 6px 25px rgba(0,0,0,0.6); }
+    .chat-container::before {
+      content: "TOP SECRET";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 5rem;
+      color: rgba(85,107,47, 0.1);
+      pointer-events: none;
+      user-select: none;
+      animation: watermarkFade 5s infinite alternate;
+    }
+    @keyframes watermarkFade {
+      from { opacity: 0.05; }
+      to { opacity: 0.15; }
+    }
     .chat-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      background: #4CAF50;
+      background: var(--primary);
+      padding: 15px;
       color: #fff;
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      box-shadow: inset 0 -2px 5px rgba(0,0,0,0.3);
     }
     .chat-header h2 {
       margin: 0;
+      font-size: 1.8em;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    .chat-header h2::before {
+      content: "🔒";
       font-size: 1.2em;
     }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
     .controls button {
-      margin-left: 5px;
-      padding: 5px 10px;
-      font-size: 0.9em;
-      border: none;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
       border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 0.9em;
+      color: var(--primary);
       cursor: pointer;
-      background: #fff;
-      color: #4CAF50;
-      transition: background 0.3s, color 0.3s;
+      transition: background var(--transition), color var(--transition);
     }
-    .controls button:hover {
-      background: #e6e6e6;
+    .controls button:hover { background: var(--accent); color: #fff; }
+    .controls button:focus { outline: none; box-shadow: 0 0 5px var(--accent); }
+    .passphrase-group, .mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-    /* Chat Log */
+    #passphrase-input {
+      padding: 6px;
+      font-size: 0.9em;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: box-shadow var(--transition);
+    }
+    #passphrase-input:focus { box-shadow: 0 0 8px var(--accent); }
     .chat-log {
       flex: 1;
+      padding: 15px;
+      background: var(--bg-light);
       overflow-y: auto;
-      padding: 10px;
-      background: #fafafa;
+      font-size: 0.95em;
+      font-family: monospace;
+      color: var(--text-light);
     }
     .chat-log p {
-      margin: 6px 0;
-      word-wrap: break-word;
+      margin: 10px 0;
+      line-height: 1.4;
+      animation: fadeIn 0.5s ease-out;
     }
-    /* Chat Form */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-log .system { color: var(--accent); }
+    /* Custom Scrollbar Styling */
+    .chat-log::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-log::-webkit-scrollbar-track {
+      background: var(--bg-light);
+    }
+    .chat-log::-webkit-scrollbar-thumb {
+      background-color: var(--primary);
+      border-radius: 4px;
+    }
     #chat-form {
       display: flex;
-      border-top: 1px solid #ddd;
+      border-top: 1px solid var(--border);
     }
     #chat-input {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       font-size: 1em;
       border: none;
       outline: none;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background var(--transition);
     }
+    #chat-input::placeholder { color: #777; }
     button[type="submit"] {
-      padding: 10px;
-      font-size: 1em;
+      background: var(--primary);
       border: none;
-      background: #4CAF50;
       color: #fff;
+      padding: 12px 20px;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background var(--transition);
     }
-    button[type="submit"]:hover {
-      background: #45a049;
+    button[type="submit"]:hover { background: var(--accent); }
+    /* Decoy UI: Full-screen overlay for YouTube */
+    #decoy-ui {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 2000;
+      margin: 0;
+      padding: 0;
     }
-    /* Responsive Adjustments */
+    #decoy-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    #exit-decoy {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      padding: 10px 20px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 2100;
+      transition: background var(--transition);
+    }
+    #exit-decoy:hover { background: var(--accent); }
+    /* Instructions Overlay */
+    .instructions {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 15px;
+      border-radius: 4px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.9em;
+      color: #fff;
+      z-index: 1500;
+      opacity: 0.95;
+      transition: opacity 0.5s ease-out;
+    }
     @media (max-width: 600px) {
-      .chat-container {
-        height: 90vh;
-      }
-      .chat-header h2 {
-        font-size: 1em;
-      }
-      #chat-input, button[type="submit"], .controls button {
-        font-size: 0.9em;
-        padding: 8px;
-      }
+      .chat-container { height: 90vh; }
+      .chat-header h2 { font-size: 1.5em; }
+      #chat-input, button[type="submit"], .controls button { font-size: 0.9em; padding: 8px; }
     }
   </style>
 </head>
 <body>
-  <!-- Loader displayed until DOM load -->
+  <!-- Loader -->
   <div class="loader" id="loader">
     <div class="spinner"></div>
-    <p>Loading chat...</p>
+    <p>Decrypting secrets...</p>
   </div>
 
-  <!-- Chat App Container -->
+  <!-- Chat App -->
   <div class="chat-container" id="chatApp">
     <div class="chat-header">
-      <h2>Encrypted Chat Room</h2>
+      <h2>Top Secret Chat</h2>
       <div class="controls">
-        <button id="show-id-btn">Show My ID</button>
-        <button id="connect-btn">Connect</button>
-        <button id="invite-btn">Copy Invite Link</button>
+        <button id="show-id-btn" title="Display your unique Peer ID">Show My ID</button>
+        <button id="connect-btn" title="Connect to a friend using their Peer ID">Connect</button>
+        <button id="invite-btn" title="Copy invite link to clipboard" disabled>Copy Invite Link</button>
+        <button id="decoy-btn" title="Activate decoy mode to hide chat">Decoy Mode</button>
+        <div class="passphrase-group">
+          <label for="passphrase-input">Pass:</label>
+          <input type="text" id="passphrase-input" placeholder="Enter pass">
+        </div>
+        <div class="mode-toggle">
+          <label for="dark-mode-switch">Dark</label>
+          <input type="checkbox" id="dark-mode-switch">
+        </div>
       </div>
     </div>
     <div id="chat-log" class="chat-log"></div>
     <form id="chat-form">
-      <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" required>
+      <input type="text" id="chat-input" placeholder="Type your top secret message..." autocomplete="off" required>
       <button type="submit">Send</button>
     </form>
+    
+    <!-- Decoy UI: Full-screen overlay for YouTube -->
+    <div id="decoy-ui">
+      <button id="exit-decoy">Exit Decoy</button>
+      <iframe id="decoy-iframe" src="https://www.youtube.com/embed/5qap5aO4i9A?autoplay=1" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+      </iframe>
+    </div>
   </div>
 
-  <!-- Load CryptoJS & PeerJS from CDNs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <!-- External Libraries -->
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+  <!-- Service Worker & Manifest Setup -->
+  <script>
+    const manifestJson = {
+      "name": "Top Secret Chat",
+      "short_name": "SecretChat",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#1C1C1C",
+      "theme_color": "#556B2F",
+      "icons": [{
+        "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDUzNSA1MzUiIHhtbDpzcGFjZS1jYXNvPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiBzdHlsZT0iYmFja2dyb3VuZDogI2ZmZjsiPjxwYXRoIGZpbGw9IiM1NTZCMkYiIGQ9Ik0xMjUgMTI1aDI4NnYyODZIMTI1eiIvPjxwYXRoIGZpbGw9IiM4RkJDOEYiIGQ9Ik0xMjUgMTI1aDUzNnYyODZIMTI1eiIgb3BhY2l0eT0iMC4yIi8+PC9zdmc+",
+        "sizes": "300x300",
+        "type": "image/svg+xml"
+      }]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestJson)], {type: 'application/json'});
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+    document.getElementById('pwa-manifest').setAttribute('href', manifestUrl);
+    
+    const SW_CODE = `
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open('secret-chat-v1').then(cache => cache.addAll(['./'])));
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(response => response || fetch(e.request)));
+});
+`;
+    if ('serviceWorker' in navigator) {
+      const swBlob = new Blob([SW_CODE], { type: 'text/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl)
+        .then(() => console.log('Service Worker Registered'))
+        .catch(err => console.log('Service Worker Error:', err));
+    }
+  </script>
 
   <script>
     'use strict';
+    let ecPrivateKey = null;
+    let ecPublicKeyJwk = null;
+    let sessionKey = null;
+    let userPass = '';
+    let nickname = '';
+    let peer = null;
+    let conn = null;
+    let isConnected = false;
+    let messageCount = 0;
 
-    // Shared secret key for encryption
-    const SECRET_KEY = 'mySuperSecretKey123!';
-    let peer, conn = null, nickname = '';
+    async function generateEphemeralKeys() {
+      const keyPair = await crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        ["deriveKey", "deriveBits"]
+      );
+      ecPrivateKey = keyPair.privateKey;
+      ecPublicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+      console.log("Ephemeral keys generated.");
+    }
 
-    // DOM Elements
+    async function deriveAesKey(peerPubJwk) {
+      try {
+        const peerPubKey = await crypto.subtle.importKey(
+          "jwk",
+          peerPubJwk,
+          { name: "ECDH", namedCurve: "P-256" },
+          false,
+          []
+        );
+        const bits = await crypto.subtle.deriveBits(
+          { name: "ECDH", public: peerPubKey },
+          ecPrivateKey,
+          256
+        );
+        const aesKey = await crypto.subtle.importKey(
+          "raw",
+          bits,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+        return aesKey;
+      } catch (err) {
+        console.error("deriveAesKey error:", err);
+        return null;
+      }
+    }
+
+    async function encryptMessage(plaintext) {
+      if (!sessionKey) return null;
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const data = new TextEncoder().encode(plaintext);
+      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sessionKey, data);
+      return btoa(String.fromCharCode(...iv)) + ":" + btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
+    }
+
+    async function decryptMessage(payload) {
+      if (!sessionKey) return "[No session key yet]";
+      try {
+        const [ivB64, ciphB64] = payload.split(":");
+        if (!ivB64 || !ciphB64) return "[Invalid ciphertext format]";
+        const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+        const ciph = Uint8Array.from(atob(ciphB64), c => c.charCodeAt(0));
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, sessionKey, ciph);
+        return new TextDecoder().decode(decrypted);
+      } catch (err) {
+        console.error("decryptMessage error:", err);
+        return "[Decryption error]";
+      }
+    }
+
     const loader = document.getElementById('loader');
     const chatLog = document.getElementById('chat-log');
     const chatForm = document.getElementById('chat-form');
@@ -196,195 +431,224 @@
     const showIdBtn = document.getElementById('show-id-btn');
     const connectBtn = document.getElementById('connect-btn');
     const inviteBtn = document.getElementById('invite-btn');
+    const decoyBtn = document.getElementById('decoy-btn');
+    const passphraseInput = document.getElementById('passphrase-input');
+    const darkModeSwitch = document.getElementById('dark-mode-switch');
+    let messages = [];
 
-    // We store chat messages in localStorage so we can restore them
-    let messages = []; // Array of { sender, text, timestamp }
-
-    // Load messages from localStorage
-    function loadMessages() {
-      try {
-        const stored = JSON.parse(localStorage.getItem('chatMessages')) || [];
-        messages = Array.isArray(stored) ? stored : [];
-      } catch (err) {
-        console.warn("Could not parse stored messages:", err);
-        messages = [];
-      }
-    }
-
-    // Save messages to localStorage
-    function saveMessages() {
-      localStorage.setItem('chatMessages', JSON.stringify(messages));
-    }
-
-    // Prompt for nickname (saved in localStorage)
-    function promptNickname() {
-      nickname = localStorage.getItem('chatNickname') || prompt("Enter your nickname:");
-      if (!nickname || nickname.trim() === '') nickname = "Anonymous";
-      localStorage.setItem('chatNickname', nickname);
-      displayMessage('System', `Your nickname is "${nickname}"`);
-    }
-
-    // Encryption helpers
-    function encryptMessage(message) {
-      return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
-    }
-    function decryptMessage(ciphertext) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-        return bytes.toString(CryptoJS.enc.Utf8);
-      } catch (err) {
-        console.error('Decryption failed:', err);
-        return 'Decryption error';
-      }
-    }
-
-    // Append a message to local chat, save & update UI
     function addMessage(sender, text) {
-      const timestamp = new Date().toLocaleTimeString();
-      const msgObj = { sender, text, timestamp };
-      messages.push(msgObj);
-      saveMessages();
-      displayMessage(sender, text, timestamp);
+      const now = Date.now();
+      const stamp = new Date(now).toLocaleTimeString();
+      const msg = { sender, text, timestamp: stamp, epochMs: now };
+      messages.push(msg);
+      displayMessage(sender, text, stamp);
+      if (++messageCount >= 10) { rotateKeys(); messageCount = 0; }
     }
 
-    // Display a single message in the chat log
-    function displayMessage(sender, text, time) {
-      const chatMsg = document.createElement('p');
-      const timestamp = time || new Date().toLocaleTimeString();
-      chatMsg.innerHTML = `<strong>[${timestamp}] ${sender}:</strong> ${text}`;
-      chatLog.appendChild(chatMsg);
+    function displayMessage(sender, text, stamp) {
+      const p = document.createElement('p');
+      p.innerHTML = `<strong>[${stamp}] ${sender}:</strong> ${text}`;
+      if(sender === 'System') p.classList.add('system');
+      chatLog.appendChild(p);
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Render all stored messages
-    function renderAllMessages() {
-      chatLog.innerHTML = '';
-      messages.forEach(m => {
-        displayMessage(m.sender, m.text, m.timestamp);
-      });
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }
-
-    // Initialize PeerJS
     function initPeer() {
       try {
-        peer = new Peer();
+        peer = new Peer(undefined, {
+          host: '0.peerjs.com',
+          secure: true,
+          port: 443,
+          config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
+        });
         peer.on('open', id => {
           addMessage('System', `Your Peer ID is: ${id}`);
-          console.log('My peer ID is:', id);
           inviteBtn.disabled = false;
           autoJoinIfNeeded();
         });
         peer.on('connection', connection => {
+          if (isConnected) { connection.close(); return; }
+          isConnected = true;
           conn = connection;
           setupConnectionHandlers();
         });
         peer.on('error', err => {
-          console.error('Peer error:', err);
-          addMessage('System', 'Peer error: ' + err);
+          console.error("Peer error:", err);
+          addMessage('System', `Peer error: ${err.type || err}`);
         });
-      } catch (error) {
-        console.error('PeerJS init error:', error);
+      } catch (err) {
+        console.error("Peer init error:", err);
         addMessage('System', 'PeerJS failed to initialize.');
       }
     }
 
-    // If there's a ?join=PEER_ID in the URL, auto‑connect
     function autoJoinIfNeeded() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const joinId = urlParams.get('join');
-      if (joinId) {
+      const joinId = new URLSearchParams(window.location.search).get('join');
+      if (joinId && !isConnected) {
         addMessage('System', `Auto-joining peer: ${joinId}`);
         conn = peer.connect(joinId);
+        isConnected = true;
         setupConnectionHandlers();
       }
     }
 
-    // Setup event handlers for the peer connection
     function setupConnectionHandlers() {
       if (!conn) return;
-      conn.on('data', data => {
-        const decrypted = decryptMessage(data);
-        addMessage(conn.peer, decrypted);
+      conn.on('data', async data => {
+        if (data.type === 'handshake') {
+          if (data.passphrase !== userPass) {
+            addMessage('System', 'Passphrase mismatch. Connection closed.');
+            conn.close(); isConnected = false; return;
+          }
+          sessionKey = await deriveAesKey(data.pubKey);
+          if (!sessionKey) { addMessage('System', 'Key derivation failed.'); return; }
+          conn.send({ type: 'handshake-reply', pubKey: ecPublicKeyJwk, passphrase: userPass });
+        } else if (data.type === 'handshake-reply') {
+          if (data.passphrase !== userPass) {
+            addMessage('System', 'Passphrase mismatch in reply. Connection closed.');
+            conn.close(); isConnected = false; return;
+          }
+          sessionKey = await deriveAesKey(data.pubKey);
+          if (!sessionKey) { addMessage('System', 'Key derivation failed.'); return; }
+        } else if (data.type === 'ciphertext') {
+          if (!sessionKey) { addMessage(conn.peer, "[No session key]"); return; }
+          try { addMessage(conn.peer, await decryptMessage(data.payload)); }
+          catch (err) { addMessage('System', "[Decryption error]"); }
+        }
       });
       conn.on('open', () => {
         addMessage('System', `Connected to peer: ${conn.peer}`);
+        if (!userPass || userPass.length < 3)
+          addMessage('System', 'Warning: Passphrase is too short.');
+        conn.send({ type: 'handshake', pubKey: ecPublicKeyJwk, passphrase: userPass });
       });
       conn.on('error', err => {
-        console.error('Connection error:', err);
-        addMessage('System', 'Connection error: ' + err);
+        console.error("Connection error:", err);
+        addMessage('System', `Connection error: ${err.type || err}`);
       });
-      conn.on('close', () => {
-        addMessage('System', 'Connection closed.');
-        conn = null;
-      });
+      conn.on('close', () => { addMessage('System', 'Connection closed.'); conn = null; sessionKey = null; isConnected = false; });
     }
 
-    // Manually connect to a friend's Peer ID
     function connectToPeer() {
       const friendId = prompt("Enter friend's Peer ID:");
       if (friendId && friendId.trim() !== '') {
-        conn = peer.connect(friendId);
+        if (isConnected && conn) { addMessage('System', 'Already connected.'); return; }
+        conn = peer.connect(friendId.trim());
+        isConnected = true;
         setupConnectionHandlers();
-      } else {
-        addMessage('System', 'Invalid Peer ID.');
-      }
+      } else { addMessage('System', 'Invalid Peer ID.'); }
     }
 
-    // DOM event listeners
     showIdBtn.addEventListener('click', () => {
-      if (peer && peer.id) {
-        alert("Your Peer ID is: " + peer.id);
-      } else {
-        alert("Peer not initialized yet.");
-      }
+      alert(peer && peer.id ? "Your Peer ID is: " + peer.id : "Peer not initialized yet.");
     });
-    connectBtn.addEventListener('click', () => {
-      connectToPeer();
-    });
+    connectBtn.addEventListener('click', connectToPeer);
     inviteBtn.addEventListener('click', () => {
-      if (!peer || !peer.id) {
-        alert("Peer ID not available yet.");
-        return;
-      }
+      if (!peer || !peer.id) { alert("Peer ID not available yet."); return; }
       const joinUrl = `${window.location.origin}${window.location.pathname}?join=${peer.id}`;
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(joinUrl)
-          .then(() => alert("Invite link copied to clipboard!"))
-          .catch(err => {
-            console.error("Failed to copy link:", err);
-            alert("Failed to copy link.");
-          });
-      } else {
-        prompt("Copy this invite link:", joinUrl);
-      }
+          .then(() => alert("Invite link copied!"))
+          .catch(err => { console.error("Copy failed:", err); alert("Copy failed."); });
+      } else { prompt("Copy this invite link:", joinUrl); }
     });
-
-    // Send a chat message
-    chatForm.addEventListener('submit', e => {
+    chatForm.addEventListener('submit', async e => {
       e.preventDefault();
       const message = chatInput.value.trim();
       if (!message) return;
-      // Encrypt & send if connected
-      if (conn && conn.open) {
-        const encrypted = encryptMessage(message);
-        conn.send(encrypted);
-        addMessage(nickname, message);
-      } else {
-        addMessage('System', 'Not connected to any peer.');
+      if (!conn || !conn.open) { addMessage('System', 'Not connected.'); }
+      else if (!sessionKey) { addMessage('System', 'No session key.'); }
+      else {
+        try {
+          const ct = await encryptMessage(message);
+          if (!ct) addMessage('System', '[Encryption failed]');
+          else { conn.send({ type: 'ciphertext', payload: ct }); addMessage(nickname, message); }
+        } catch (err) { addMessage('System', '[Encryption error]'); }
       }
       chatInput.value = '';
     });
-
-    // Page load
-    window.addEventListener('DOMContentLoaded', () => {
-      loader.style.display = 'none'; // Show UI immediately
-      inviteBtn.disabled = true;
-      loadMessages();         // Load from localStorage
-      renderAllMessages();    // Render them
-      promptNickname();       // Ask for nickname
-      initPeer();             // Start PeerJS
-      console.log("Encrypted Chat App loaded. Persisted chat with direct invite, no service worker.");
+    darkModeSwitch.addEventListener('change', () => {
+      document.body.classList.toggle('dark', darkModeSwitch.checked);
+    });
+    passphraseInput.addEventListener('input', () => { userPass = passphraseInput.value.trim(); });
+    decoyBtn.addEventListener('click', () => {
+      document.getElementById('decoy-ui').style.display = 'block';
+    });
+    document.getElementById('exit-decoy').addEventListener('click', () => {
+      document.getElementById('decoy-ui').style.display = 'none';
+    });
+    async function rotateKeys() {
+      await generateEphemeralKeys();
+      if (conn && conn.open) {
+        conn.send({ type: 'handshake', pubKey: ecPublicKeyJwk, passphrase: userPass });
+      }
+    }
+    function secureShred(variable) {
+      if (typeof variable === "string") {
+        let scrambled = "";
+        for (let i = 0; i < variable.length; i++) {
+          scrambled += String.fromCharCode(crypto.getRandomValues(new Uint8Array(1))[0]);
+        }
+        return scrambled;
+      } else if (Array.isArray(variable)) {
+        for (let i = 0; i < variable.length; i++) {
+          variable[i] = crypto.getRandomValues(new Uint8Array(1))[0];
+        }
+        return variable;
+      }
+      return null;
+    }
+    function secureWipe() {
+      for (let i = 0; i < 3; i++) {
+        userPass = secureShred(userPass);
+        nickname = secureShred(nickname);
+      }
+      userPass = ""; nickname = "";
+      ecPrivateKey = ecPublicKeyJwk = sessionKey = null;
+      messages = secureShred(messages) || [];
+      chatLog.innerHTML = "";
+      if (conn && conn.close) conn.close();
+      console.log("Secure wipe executed.");
+    }
+    window.addEventListener("beforeunload", secureWipe);
+    function showInstructions() {
+      const instructions = document.createElement('div');
+      instructions.className = 'instructions';
+      instructions.textContent = 'Welcome to Top Secret Chat. Use the controls above to share your secrets securely.';
+      chatLog.appendChild(instructions);
+      setTimeout(() => {
+        instructions.style.opacity = '0';
+        setTimeout(() => { instructions.remove(); }, 500);
+      }, 5000);
+    }
+    window.addEventListener('DOMContentLoaded', async () => {
+      darkModeSwitch.checked = true;
+      document.body.classList.add('dark');
+      const params = new URLSearchParams(window.location.search);
+      const joinId = params.get('join');
+      let tempNick = "";
+      while (!tempNick) {
+        tempNick = prompt("Enter your nickname:") || "";
+      }
+      nickname = tempNick;
+      let tempPass = "";
+      if (joinId) {
+        while (!tempPass) {
+          tempPass = prompt("Enter the passphrase provided by your friend:") || "";
+        }
+      } else {
+        while (!tempPass) {
+          tempPass = prompt("Set a passphrase for your chat:") || "";
+        }
+      }
+      userPass = tempPass;
+      addMessage('System', `Your nickname is "${nickname}"`);
+      passphraseInput.value = userPass;
+      await generateEphemeralKeys();
+      initPeer();
+      showInstructions();
+      loader.style.display = 'none';
+      console.log("Top Secret Chat loaded.");
     });
   </script>
 </body>
